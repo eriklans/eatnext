@@ -4,17 +4,16 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { fetchProduct } from '../services/openFoodFacts';
 import { useState, useRef } from 'react';
 
-export default function ScanScreen() {
+export default function ScanScreen({ navigation }) {
   const [permission, requestPermission] = useCameraPermissions();
   const [scannedCode, setScannedCode] = useState(null);
-  const [product, setProduct] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
 
   // Spärr som stoppar dubbla skanningar direkt, innan React hunnit rita om
   const isHandlingScan = useRef(false);
 
-  // Körs när kameran hittar en streckkod, samt sparar koden och hämtar varan från API:et
+  // Körs när kameran hittar en streckkod: hämtar varan och går vidare till "Lägg till vara"
   async function handleBarcodeScanned(result) {
     if (isHandlingScan.current) {
       return;
@@ -22,13 +21,12 @@ export default function ScanScreen() {
     isHandlingScan.current = true;
 
     setScannedCode(result.data);
-    setProduct(null);
     setErrorMessage(null);
     setIsLoading(true);
 
     try {
-      const foundProduct = await fetchProduct(result.data);
-      setProduct(foundProduct);
+      const product = await fetchProduct(result.data);
+      goToAddItem(result.data, product);
     } catch (error) {
       setErrorMessage('Kunde inte hämta varan. Kontrollera din internetanslutning.');
     } finally {
@@ -36,10 +34,19 @@ export default function ScanScreen() {
     }
   }
 
+  // Skickar vidare koden och varan till "Lägg till vara"
+  function goToAddItem(barcode, product) {
+    navigation.replace('AddItem', {
+      barcode,
+      name: product?.name ?? '',
+      imageUrl: product?.imageUrl ?? null,
+      found: product !== null,
+    });
+  }
+
   function resetScan() {
     isHandlingScan.current = false;
     setScannedCode(null);
-    setProduct(null);
     setErrorMessage(null);
   }
 
@@ -89,13 +96,13 @@ export default function ScanScreen() {
       return <Text>Hämtar vara...</Text>;
     }
 
+    // Hit kommer man bara vid nätverksfel, eftersom övriga fall navigerar vidare
     return (
       <>
-        {errorMessage && <Text style={styles.error}>{errorMessage}</Text>}
-        {!errorMessage && !product && <Text>Varan hittades inte</Text>}
-        {product && <Text style={styles.code}>{product.name || 'Namn saknas'}</Text>}
+        <Text style={styles.error}>{errorMessage}</Text>
         <Text>Streckkod: {scannedCode}</Text>
-        <Button title='Skanna igen' onPress={resetScan} />
+        <Button title="Skanna igen" onPress={resetScan} />
+        <Button title="Lägg till manuellt" onPress={() => goToAddItem(scannedCode, null)} />
       </>
     );
   }
@@ -117,11 +124,6 @@ const styles = StyleSheet.create({
     padding: 24,
     alignItems: 'center',
     gap: 12,
-  },
-  code: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center'
   },
   error: {
     color: '#B42318',
