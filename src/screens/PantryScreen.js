@@ -1,7 +1,9 @@
 import { useCallback, useState } from "react";
-import { Button, FlatList, StyleSheet, Text, View } from "react-native";
+import { Alert, Button, FlatList, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
-import { loadItems } from "../services/storage";
+import { loadItems, removeItem } from "../services/storage";
+import PantryItem from "../components/PantryItem";
+import { colors } from "../theme/colors";
 
 export default function PantryScreen({ navigation }) {
   const [items, setItems] = useState([]);
@@ -24,6 +26,31 @@ export default function PantryScreen({ navigation }) {
     }
   }
 
+  // Frågar användaren innan en vara tas bort, så att ingen tas bort av misstag
+  function confirmRemove(item) {
+    Alert.alert(
+      "Ta bort vara",
+      `Vill du ta bort ${item.name} från skafferiet?`,
+      [
+        { text: "Avbryt", style: "cancel" },
+        {
+          text: "Ta bort",
+          style: "destructive",
+          onPress: () => deleteItem(item.id),
+        },
+      ],
+    );
+  }
+
+  async function deleteItem(id) {
+    try {
+      await removeItem(id);
+      await loadPantry();
+    } catch (error) {
+      setErrorMessage("Kunde inte ta bort varan. Försök igen.");
+    }
+  }
+
   return (
     <View style={styles.container}>
       {errorMessage && <Text style={styles.error}>{errorMessage}</Text>}
@@ -32,17 +59,19 @@ export default function PantryScreen({ navigation }) {
         data={items}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <View style={styles.item}>
-            <Text style={styles.itemName}>{item.name}</Text>
-            <Text style={styles.itemDate}>
-              Bäst före {formatDate(item.expiryDate)}
-            </Text>
-          </View>
+          <PantryItem item={item} onLongPress={() => confirmRemove(item)} />
         )}
         ListEmptyComponent={
           <Text style={styles.empty}>
             Skafferiet är tomt. Skanna en vara för att börja.
           </Text>
+        }
+        ListFooterComponent={
+          items.length > 0 && (
+            <Text style={styles.hint}>
+              Håll inne på en vara för att ta bort den
+            </Text>
+          )
         }
         contentContainerStyle={styles.list}
       />
@@ -64,38 +93,28 @@ function sortByExpiryDate(items) {
   );
 }
 
-function formatDate(isoDate) {
-  return new Date(isoDate).toLocaleDateString("sv-SE");
-}
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: colors.background,
   },
   list: {
     padding: 16,
     gap: 10,
   },
-  item: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 14,
-    gap: 4,
-  },
-  itemName: {
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  itemDate: {
-    color: "#666",
-  },
   empty: {
     textAlign: "center",
     marginTop: 40,
-    color: "#666",
+    color: colors.textMuted,
+  },
+  hint: {
+    textAlign: "center",
+    marginTop: 8,
+    fontSize: 12,
+    color: colors.textMuted,
   },
   error: {
-    color: "#B42318",
+    color: colors.error,
     textAlign: "center",
     padding: 16,
   },
