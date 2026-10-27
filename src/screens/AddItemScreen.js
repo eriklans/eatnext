@@ -1,6 +1,7 @@
 import { Alert, Button, Image, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useState } from 'react';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { addItem } from '../services/storage';
 
 export default function AddItemScreen({ route, navigation }) {
     // Parametrar från Skanna-skärmen. ?? {} gör att skärmen fungerar även utan parametrar,
@@ -16,14 +17,23 @@ export default function AddItemScreen({ route, navigation }) {
         }
     }
 
-    function handleSave() {
+    async function handleSave() {
         if (name.trim() === '') {
             Alert.alert('Namn saknas', 'Skriv in ett namn på varan innan du sparar.');
             return;
         }
 
-        // Varan sparas i skafferiet i nästa steg
-        navigation.goBack();
+        try {
+            await addItem({
+                name: name.trim(),
+                expiryDate: expiryDate.toISOString(),
+                imageUrl: imageUrl ?? null,
+                barcode: barcode ?? null,
+            });
+            navigation.goBack();
+        } catch (error) {
+            Alert.alert('Kunde inte spara', 'Något gick fel när varan skulle sparas. Försök igen.');
+        }
     }
 
     return (
