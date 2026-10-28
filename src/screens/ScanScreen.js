@@ -1,8 +1,9 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, Button } from 'react-native';
-import { CameraView, useCameraPermissions } from 'expo-camera';
-import { fetchProduct } from '../services/openFoodFacts';
-import { useState, useRef } from 'react';
+import { StyleSheet, Text, View, Pressable } from "react-native";
+import { CameraView, useCameraPermissions } from "expo-camera";
+import { fetchProduct } from "../services/openFoodFacts";
+import { useState, useRef } from "react";
+import PrimaryButton from "../components/PrimaryButton";
+import { colors } from "../theme/colors";
 
 export default function ScanScreen({ navigation }) {
   const [permission, requestPermission] = useCameraPermissions();
@@ -28,7 +29,7 @@ export default function ScanScreen({ navigation }) {
       const product = await fetchProduct(result.data);
       goToAddItem(result.data, product);
     } catch (error) {
-      setErrorMessage('Kunde inte hämta varan. Kontrollera din internetanslutning.');
+      setErrorMessage("Kunde inte hämta varan. Kontrollera din internetanslutning.");
     } finally {
       setIsLoading(false);
     }
@@ -36,9 +37,9 @@ export default function ScanScreen({ navigation }) {
 
   // Skickar vidare koden och varan till "Lägg till vara"
   function goToAddItem(barcode, product) {
-    navigation.replace('AddItem', {
+    navigation.replace("AddItem", {
       barcode,
-      name: product?.name ?? '',
+      name: product?.name ?? "",
       imageUrl: product?.imageUrl ?? null,
       found: product !== null,
     });
@@ -52,15 +53,17 @@ export default function ScanScreen({ navigation }) {
 
   // Läge 1: behörigheten har inte laddats än
   if (!permission) {
-    return <View/>;
+    return <View style={styles.container} />;
   }
 
   // Läge 2: användaren har inte gett behörighet
   if (!permission.granted) {
     return (
-      <View style={styles.container}>
-        <Text>EatNext behöver kameran för att skanna streckkoder.</Text>
-        <Button title='Ge åtkomst till kameran' onPress={requestPermission} />
+      <View style={[styles.container, styles.centered]}>
+        <Text style={styles.message}>
+          EatNext behöver kameran för att skanna streckkoder.
+        </Text>
+        <PrimaryButton title="Ge åtkomst till kameran" onPress={requestPermission} />
       </View>
     );
   }
@@ -72,7 +75,7 @@ export default function ScanScreen({ navigation }) {
         style={styles.camera}
         // EAN och UPC är de streckkodstyper som används på matvaror
         barcodeScannerSettings={{
-          barcodeTypes: ['ean13', 'ean8', 'upc_a', 'upc_e'],
+          barcodeTypes: ["ean13", "ean8", "upc_a", "upc_e"],
         }}
         // Pausa skanningen när kod redan finns, annars läser det samma kod många gånger i sekunden
         onBarcodeScanned={scannedCode ? undefined : handleBarcodeScanned}
@@ -81,28 +84,28 @@ export default function ScanScreen({ navigation }) {
       <View style={styles.result}>
         {renderResult()}
       </View>
-
-      <StatusBar style="auto" />
     </View>
   );
 
   // Väljer vad resultatrutan ska visa utifrån skanningens läge
   function renderResult() {
     if (!scannedCode) {
-      return <Text>Rikta kameran mot en streckkod</Text>;
+      return <Text style={styles.message}>Rikta kameran mot en streckkod</Text>;
     }
 
     if (isLoading) {
-      return <Text>Hämtar vara...</Text>;
+      return <Text style={styles.message}>Hämtar vara...</Text>;
     }
 
     // Hit kommer man bara vid nätverksfel, eftersom övriga fall navigerar vidare
     return (
       <>
         <Text style={styles.error}>{errorMessage}</Text>
-        <Text>Streckkod: {scannedCode}</Text>
-        <Button title="Skanna igen" onPress={resetScan} />
-        <Button title="Lägg till manuellt" onPress={() => goToAddItem(scannedCode, null)} />
+        <Text style={styles.barcode}>Streckkod: {scannedCode}</Text>
+        <PrimaryButton title="Skanna igen" onPress={resetScan} />
+        <Pressable onPress={() => goToAddItem(scannedCode, null)}>
+          <Text style={styles.link}>Lägg till manuellt</Text>
+        </Pressable>
       </>
     );
   }
@@ -111,22 +114,38 @@ export default function ScanScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: colors.background,
+  },
+  centered: {
+    justifyContent: "center",
+    padding: 24,
+    gap: 16,
   },
   camera: {
     flex: 1,
-    width: '100%',
   },
   result: {
-    width: '100%',
     padding: 24,
-    alignItems: 'center',
+    paddingBottom: 40,
     gap: 12,
   },
+  message: {
+    textAlign: "center",
+    fontSize: 16,
+    color: colors.text,
+  },
   error: {
-    color: '#B42318',
-    textAlign: 'center',
+    color: colors.error,
+    textAlign: "center",
+  },
+  barcode: {
+    textAlign: "center",
+    color: colors.textMuted,
+  },
+  link: {
+    textAlign: "center",
+    color: colors.primary,
+    fontWeight: "600",
+    padding: 8,
   },
 });
