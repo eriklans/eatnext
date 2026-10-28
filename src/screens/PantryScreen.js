@@ -1,8 +1,10 @@
 import { useCallback, useState } from "react";
-import { Alert, Button, FlatList, StyleSheet, Text, View } from "react-native";
+import { Alert, FlatList, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 import { loadItems, removeItem } from "../services/storage";
 import PantryItem from "../components/PantryItem";
+import PrimaryButton from "../components/PrimaryButton";
 import { colors } from "../theme/colors";
 
 export default function PantryScreen({ navigation }) {
@@ -77,8 +79,9 @@ export default function PantryScreen({ navigation }) {
       />
 
       <View style={styles.footer}>
-        <Button
+        <PrimaryButton
           title="Skanna vara"
+          icon={<Ionicons name="camera-outline" size={22} color="#FFFFFF" />}
           onPress={() => navigation.navigate("Scan")}
         />
       </View>
